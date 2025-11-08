@@ -1883,7 +1883,7 @@ const FileChompy = {
 		const url = new URL("https://admin.webdamdb.com/remoterequest.php");
 		url.searchParams.set("method", "getFolderAssets");
 		url.searchParams.set("folderId", folderId);
-		url.searchParams.set("sortBy", "datecreated");
+		url.searchParams.set("sortBy", "filename");
 		url.searchParams.set("sortOrder", "desc");
 		url.searchParams.set("uniqueId", window.WebDAM.CURRENT_USER.id_encrypted);
 		url.searchParams.set(
