@@ -285,7 +285,7 @@ const FileChompy = {
 
 			#FileChompyContainer .bulk-preview {
 				margin-top: 1rem;
-				max-height: 200px;
+				max-height: 60vh;
 				overflow-y: auto;
 				border: 1px solid #e9ecef;
 				border-radius: 4px;
