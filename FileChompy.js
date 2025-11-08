@@ -295,7 +295,7 @@ const FileChompy = {
 			#FileChompyContainer .bulk-preview-item {
 				padding: 0.75rem;
 				border-bottom: 1px solid #f1f3f4;
-				font-size: 1rem;
+				font-size: 1.2rem;
 			}
 
 			#FileChompyContainer .bulk-preview-item:last-child {
