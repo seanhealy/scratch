@@ -1,6 +1,98 @@
 const FileChompy = {
 	folderPageSize: 60,
 	jsonPrefixLength: 8,
+	css: `
+			#FileChompyContainer {
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			}
+
+			#FileChompyContainer ul {
+				display: flex;
+				flex-direction: column;
+				gap: 1rem;
+				padding: 1rem;
+				margin: 0;
+				list-style: none;
+			}
+
+			#FileChompyContainer li {
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				padding: 1rem;
+				background-color: #f8f9fa;
+				border-radius: 8px;
+				border: 1px solid #e9ecef;
+				transition: box-shadow 0.2s ease;
+			}
+
+			#FileChompyContainer img {
+				border-radius: 4px;
+				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+			}
+
+			#FileChompyContainer form {
+				display: flex;
+				align-items: center;
+				gap: 0.75rem;
+				flex: 1;
+			}
+
+			#FileChompyContainer input[name="assetName"] {
+				flex: 1;
+				padding: 0.5rem 0.75rem;
+				border: 1px solid #ced4da;
+				border-radius: 6px;
+				font-size: 14px;
+				transition: border-color 0.2s ease, box-shadow 0.2s ease;
+			}
+
+			#FileChompyContainer input[name="assetName"]:focus {
+				outline: none;
+				border-color: #007cba;
+				box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+			}
+
+			#FileChompyContainer button {
+				padding: 0.5rem 1rem;
+				background: #007cba;
+				color: white;
+				border: none;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 14px;
+				font-weight: 500;
+				white-space: nowrap;
+				transition: background-color 0.2s ease;
+			}
+
+			#FileChompyContainer button:hover:not(:disabled) {
+				background-color: #0056b3;
+			}
+
+			#FileChompyContainer button:disabled {
+				cursor: not-allowed;
+				opacity: 0.7;
+			}
+
+			#FileChompyContainer button.success {
+				background-color: #28a745 !important;
+			}
+
+			#FileChompyContainer button.error {
+				background-color: #dc3545 !important;
+			}
+
+			#FileChompyContainer li.invalid-asset {
+				background-color: #ffe6e6;
+				border-color: #ffb3b3;
+			}
+
+			#FileChompyContainer li.valid-asset {
+				background-color: #e6ffe6;
+				border-color: #b3ffb3;
+			}
+		`,
 	validHandles: [
 		"2-2-bath-bundle-2-soft-rib-bath-towel-resort-stripe-hand-towel",
 		"2-2-bath-bundle-3-classic-white-bath-towel-mosaic-moss-hand-towel",
@@ -1409,6 +1501,20 @@ const FileChompy = {
 		"wool-dryer-ball",
 	],
 
+	isValidAssetName(assetName) {
+		// Check if asset name ends with _\d+$ pattern
+		const suffixPattern = /_\d+$/;
+		if (!suffixPattern.test(assetName)) {
+			return false;
+		}
+
+		// Extract the handle part (everything before the last underscore followed by digits)
+		const handlePart = assetName.replace(/_\d+$/, "");
+
+		// Check if the handle part is in the validHandles array
+		return this.validHandles.includes(handlePart);
+	},
+
 	async main() {
 		await this.buildUI();
 	},
@@ -1427,27 +1533,118 @@ const FileChompy = {
 		fileChompyContainer.style.backgroundColor = "#fff";
 		fileChompyContainer.style.overflow = "auto";
 
-		fileChompyContainer.innerHTML = `<h1>👹 FileChompy</h1>`;
+		fileChompyContainer.innerHTML = `
+			<style>${this.css}</style>
+			<h1>👹 FileChompy</h1>
+		`;
 		container.appendChild(fileChompyContainer);
 
 		const list = document.createElement("ul");
-		list.style.display = "flex";
-		list.style.flexDirection = "column";
-		list.style.gap = "1rem";
-
 		fileChompyContainer.appendChild(list);
 
 		for (const assetData of assets) {
 			const listItem = document.createElement("li");
 
-			listItem.style.display = "flex";
-			listItem.style.alignItems = "center";
-			listItem.style.gap = "1rem";
+			// Remove file extension from asset name
+			const assetNameWithoutExtension = assetData.asset.title.replace(
+				/\.[^/.]+$/,
+				"",
+			);
 
 			listItem.innerHTML = `
 				<img src="${assetData.asset.thumburl.thumb100}" alt="${assetData.asset.title}">
-				<span>${assetData.asset.title}</span>
+				<form data-asset-id="${assetData.asset.id}">
+					<input
+						type="text"
+						value="${assetNameWithoutExtension}"
+						name="assetName"
+					>
+					<button type="submit">Rename</button>
+				</form>
 			`;
+
+			// Validate the initial asset name and apply styling
+			if (!this.isValidAssetName(assetNameWithoutExtension)) {
+				listItem.classList.add("invalid-asset");
+			} else {
+				listItem.classList.add("valid-asset");
+			}
+
+			// Add real-time validation on input
+			const input = listItem.querySelector('input[name="assetName"]');
+			input.addEventListener("input", (e) => {
+				const currentName = e.target.value;
+				if (this.isValidAssetName(currentName)) {
+					// Remove invalid styling if name becomes valid
+					listItem.classList.remove("invalid-asset");
+				} else {
+					// Add invalid styling if name becomes invalid
+					listItem.classList.add("invalid-asset");
+					listItem.classList.remove("valid-asset");
+				}
+			});
+
+			// Add event listener for form submission
+			const form = listItem.querySelector("form");
+			form.addEventListener("submit", async (e) => {
+				e.preventDefault();
+				const assetId = form.getAttribute("data-asset-id");
+				const newName = form.querySelector('input[name="assetName"]').value;
+				const button = form.querySelector("button");
+
+				// Validate asset name format
+				if (!this.isValidAssetName(newName)) {
+					button.textContent = "Invalid Name";
+					button.classList.add("error");
+					setTimeout(() => {
+						button.textContent = "Rename";
+						button.classList.remove("error");
+					}, 2000);
+					return;
+				}
+
+				// Disable button and show loading state
+				button.disabled = true;
+				button.textContent = "Renaming...";
+
+				try {
+					await this.renameFile(assetId, newName);
+					button.textContent = "Renamed!";
+					button.classList.add("success");
+
+					// Update list item styling to reflect valid rename
+					listItem.classList.remove("invalid-asset");
+					listItem.classList.add("valid-asset");
+
+					// Focus the next asset's input field
+					const nextListItem = listItem.nextElementSibling;
+					if (nextListItem) {
+						const nextInput = nextListItem.querySelector(
+							'input[name="assetName"]',
+						);
+						if (nextInput) {
+							nextInput.focus();
+							nextInput.select();
+						}
+					}
+
+					setTimeout(() => {
+						button.textContent = "Rename";
+						button.classList.remove("success");
+						button.disabled = false;
+					}, 2000);
+				} catch (error) {
+					console.error("Rename failed:", error);
+					button.textContent = "Error";
+					button.classList.add("error");
+					setTimeout(() => {
+						button.textContent = "Rename";
+						button.classList.remove("error");
+						button.disabled = false;
+					}, 2000);
+				}
+			});
+
 			list.appendChild(listItem);
 		}
 	},
