@@ -1537,7 +1537,7 @@ const FileChompy = {
 
 		fileChompyContainer.innerHTML = `
 			<style>${this.css}</style>
-			<h1>👹 FileChompy</h1>
+			<h1>👹 FileChompy -- ${WebDAM.FOLDER_NAME(WebDAM.FOLDER_ID)}</h1>
 		`;
 		container.appendChild(fileChompyContainer);
 
