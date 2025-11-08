@@ -1831,6 +1831,7 @@ const FileChompy = {
 			matchesDisplay,
 			listItem,
 			initialAssetName,
+			true,
 		);
 
 		// Add real-time validation on input
@@ -1839,11 +1840,17 @@ const FileChompy = {
 				matchesDisplay,
 				listItem,
 				e.target.value,
+				false,
 			);
 		});
 	},
 
-	uiRenderValidationDisplay(matchesDisplay, listItem, assetName) {
+	uiRenderValidationDisplay(
+		matchesDisplay,
+		listItem,
+		assetName,
+		isInitial = false,
+	) {
 		const validation = this.validateAssetName(assetName);
 		const matchCount = validation.matches.length;
 
@@ -1865,12 +1872,25 @@ const FileChompy = {
 		}
 
 		// Update list item validation styling
-		if (validation.valid) {
-			listItem.classList.remove("invalid-asset");
-			listItem.classList.add("valid-asset");
+		if (isInitial) {
+			// Initial validation: show actual server state
+			if (validation.valid) {
+				listItem.classList.remove("invalid-asset");
+				listItem.classList.add("valid-asset");
+			} else {
+				listItem.classList.add("invalid-asset");
+				listItem.classList.remove("valid-asset");
+			}
 		} else {
-			listItem.classList.add("invalid-asset");
-			listItem.classList.remove("valid-asset");
+			// During typing: show neutral for valid, red for invalid
+			if (validation.valid) {
+				listItem.classList.remove("invalid-asset");
+				listItem.classList.remove("valid-asset");
+				// Leave neutral - valid but not saved yet
+			} else {
+				listItem.classList.add("invalid-asset");
+				listItem.classList.remove("valid-asset");
+			}
 		}
 	},
 
