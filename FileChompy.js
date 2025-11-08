@@ -237,6 +237,117 @@ const FileChompy = {
 				color: #721c24;
 				border-color: #f5c6cb;
 			}
+
+			#FileChompyContainer .bulk-operations {
+				background-color: #f8f9fa;
+				border-bottom: 1px solid #e9ecef;
+				padding: 1rem;
+				font-size: 1.1rem;
+			}
+
+			#FileChompyContainer .bulk-operations h2 {
+				margin: 0 0 1rem 0;
+				font-size: 1.4rem;
+				color: #495057;
+			}
+
+			#FileChompyContainer .bulk-form {
+				display: flex;
+				gap: 1rem;
+				align-items: end;
+				flex-wrap: wrap;
+			}
+
+			#FileChompyContainer .bulk-input-group {
+				display: flex;
+				flex-direction: column;
+				gap: 0.25rem;
+				min-width: 150px;
+			}
+
+			#FileChompyContainer .bulk-input-group label {
+				font-size: 1.1rem;
+				font-weight: 500;
+				color: #495057;
+			}
+
+			#FileChompyContainer .bulk-input-group input {
+				padding: 0.75rem;
+				border: 1px solid #ced4da;
+				border-radius: 4px;
+				font-size: 1.2rem;
+			}
+
+			#FileChompyContainer .bulk-actions {
+				display: flex;
+				gap: 0.5rem;
+			}
+
+			#FileChompyContainer .bulk-preview {
+				margin-top: 1rem;
+				max-height: 200px;
+				overflow-y: auto;
+				border: 1px solid #e9ecef;
+				border-radius: 4px;
+				background-color: #fff;
+			}
+
+			#FileChompyContainer .bulk-preview-item {
+				padding: 0.75rem;
+				border-bottom: 1px solid #f1f3f4;
+				font-size: 1rem;
+			}
+
+			#FileChompyContainer .bulk-preview-item:last-child {
+				border-bottom: none;
+			}
+
+			#FileChompyContainer .bulk-preview-item .before {
+				color: #dc3545;
+			}
+
+			#FileChompyContainer .bulk-preview-item .after {
+				color: #28a745;
+				font-weight: 500;
+			}
+
+			#FileChompyContainer .bulk-progress {
+				margin-top: 1rem;
+				padding: 0.75rem;
+				background-color: #e9ecef;
+				border-radius: 4px;
+				font-size: 1.1rem;
+				display: none;
+			}
+
+			#FileChompyContainer .bulk-progress.active {
+				display: block;
+			}
+
+			#FileChompyContainer h1 {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			#FileChompyContainer .toggle-bulk-button {
+				background-color: #007bff;
+				color: white;
+				border: none;
+				border-radius: 4px;
+				padding: 0.25rem 0.75rem;
+				font-size: 0.8rem;
+				cursor: pointer;
+				transition: background-color 0.2s;
+			}
+
+			#FileChompyContainer .toggle-bulk-button:hover {
+				background-color: #0056b3;
+			}
+
+			#FileChompyContainer .toggle-bulk-button:active {
+				background-color: #004085;
+			}
 		`,
 	validHandles: [
 		"2-2-bath-bundle-2-soft-rib-bath-towel-resort-stripe-hand-towel",
@@ -1709,6 +1820,7 @@ const FileChompy = {
 		const assets = await this.allAssets(this.getActiveFolderId());
 
 		const container = this.uiCreateMainContainer();
+		this.uiSetupBulkOperations(container);
 		this.uiSetupHandlesSidebar(container);
 		this.uiCreateAssetsList(container, assets);
 	},
@@ -1720,7 +1832,14 @@ const FileChompy = {
 
 		fileChompyContainer.innerHTML = `
 			<style>${this.css}</style>
-			<h1>👹 FileChompy<br><small>Folder: ${WebDAM.FOLDER_NAME} (${WebDAM.FOLDER_ID})</small></h1>
+			<h1>
+				<div>👹 FileChompy<br><small>Folder: ${WebDAM.FOLDER_NAME} (${WebDAM.FOLDER_ID})</small></div>
+				<button type="button" id="toggle-bulk" class="toggle-bulk-button">
+					🔄 Bulk Find/Replace
+				</button>
+			</h1>
+			<div class="bulk-operations" style="display: none;">
+			</div>
 			<div class="main-content">
 				<div class="assets-section">
 				</div>
@@ -1736,6 +1855,66 @@ const FileChompy = {
 		`;
 		container.appendChild(fileChompyContainer);
 		return fileChompyContainer;
+	},
+
+	uiSetupBulkOperations(container) {
+		const bulkSection = container.querySelector(".bulk-operations");
+
+		bulkSection.innerHTML = `
+			<h2>🔄 Bulk Find & Replace</h2>
+			<div class="bulk-form">
+				<div class="bulk-input-group">
+					<label for="bulk-find">Find:</label>
+					<input type="text" id="bulk-find" placeholder="e.g. _main">
+				</div>
+				<div class="bulk-input-group">
+					<label for="bulk-replace">Replace:</label>
+					<input type="text" id="bulk-replace" placeholder="Leave empty to remove">
+				</div>
+				<div class="bulk-actions">
+					<button type="button" id="bulk-apply" disabled>Apply Changes</button>
+				</div>
+			</div>
+			<div class="bulk-preview" id="bulk-preview-container"></div>
+			<div class="bulk-progress" id="bulk-progress"></div>
+		`;
+
+		// Setup toggle button
+		const toggleButton = container.querySelector("#toggle-bulk");
+		toggleButton.addEventListener("click", () => {
+			if (bulkSection.style.display === "none") {
+				bulkSection.style.display = "block";
+				toggleButton.textContent = "🔄 Hide Bulk Tools";
+			} else {
+				bulkSection.style.display = "none";
+				toggleButton.textContent = "🔄 Bulk Find/Replace";
+			}
+		});
+
+		// Setup event listeners
+		const findInput = bulkSection.querySelector("#bulk-find");
+		const replaceInput = bulkSection.querySelector("#bulk-replace");
+		const applyButton = bulkSection.querySelector("#bulk-apply");
+
+		applyButton.addEventListener("click", () => {
+			const findPattern = findInput.value;
+			const replacePattern = replaceInput.value;
+			this.applyBulkFindReplace(findPattern, replacePattern);
+		});
+
+		// Enable live preview on input
+		[findInput, replaceInput].forEach((input) => {
+			input.addEventListener("input", () => {
+				const findPattern = findInput.value;
+				const replacePattern = replaceInput.value;
+				if (findPattern) {
+					this.uiGenerateBulkPreview(findPattern, replacePattern);
+				} else {
+					document.querySelector("#bulk-preview-container").innerHTML = "";
+					applyButton.disabled = true;
+				}
+			});
+		});
 	},
 
 	uiSetupHandlesSidebar(container) {
@@ -1791,9 +1970,8 @@ const FileChompy = {
 
 	uiCreateAssetItem(assetData) {
 		const listItem = document.createElement("li");
-		const assetNameWithoutExtension = assetData.asset.title.replace(
-			/\.[^/.]+$/,
-			"",
+		const assetNameWithoutExtension = this.stripExtension(
+			assetData.asset.title,
 		);
 
 		// Add data attributes to the li element for easier access
@@ -1970,6 +2148,139 @@ const FileChompy = {
 			}
 			page++;
 		}
+	},
+
+	stripExtension(filename) {
+		return filename.replace(/\.[^/.]+$/, "");
+	},
+
+	getCurrentAssets() {
+		return Array.from(document.querySelectorAll("li[data-asset-id]")).map(
+			(li) => ({
+				id: li.getAttribute("data-asset-id"),
+				title: li.getAttribute("data-asset-name"),
+			}),
+		);
+	},
+
+	getBulkTransformations(findPattern, replacePattern) {
+		if (!findPattern) return [];
+
+		const assets = this.getCurrentAssets();
+		const matches = assets.filter((asset) => {
+			return asset.title.includes(findPattern);
+		});
+
+		return matches.map((asset) => {
+			const originalName = asset.title;
+			const newName = originalName.replace(
+				new RegExp(findPattern, "g"),
+				replacePattern,
+			);
+			const validation = this.validateAssetName(newName);
+
+			return {
+				assetId: asset.id,
+				originalName,
+				newName,
+				isValid: validation.valid,
+			};
+		});
+	},
+
+	uiGenerateBulkPreview(findPattern, replacePattern) {
+		const previewContainer = document.querySelector(
+			"#bulk-preview-container",
+		);
+		const applyButton = document.querySelector("#bulk-apply");
+
+		const transformations = this.getBulkTransformations(
+			findPattern,
+			replacePattern,
+		);
+
+		if (transformations.length === 0) {
+			previewContainer.innerHTML = !findPattern
+				? ""
+				: `<div class="bulk-preview-item">No files match "${findPattern}"</div>`;
+			applyButton.disabled = true;
+			return;
+		}
+
+		const previewItems = transformations
+			.map((transform) => {
+				const validClass = transform.isValid
+					? ""
+					: ' style="background-color: #ffe6e6;"';
+
+				return `
+				<div class="bulk-preview-item"${validClass}>
+					<span class="before">${transform.originalName}</span> → <span class="after">${transform.newName}</span>
+					${!transform.isValid ? ' <small style="color: #dc3545;">(Invalid)</small>' : ""}
+				</div>
+			`;
+			})
+			.join("");
+
+		previewContainer.innerHTML = `
+			<div style="padding: 0.5rem; background-color: #e9ecef; border-bottom: 1px solid #dee2e6;">
+				${transformations.length} file${transformations.length !== 1 ? "s" : ""} will be renamed
+			</div>
+			${previewItems}
+		`;
+
+		applyButton.disabled = false;
+	},
+
+	async applyBulkFindReplace(findPattern, replacePattern) {
+		const transformations = this.getBulkTransformations(
+			findPattern,
+			replacePattern,
+		);
+		const progressDiv = document.querySelector("#bulk-progress");
+		const applyButton = document.querySelector("#bulk-apply");
+
+		if (transformations.length === 0) return;
+
+		// Disable apply button and show progress
+		applyButton.disabled = true;
+		progressDiv.classList.add("active");
+
+		let successCount = 0;
+		let errorCount = 0;
+
+		for (let i = 0; i < transformations.length; i++) {
+			const transform = transformations[i];
+
+			progressDiv.innerHTML = `Renaming ${i + 1} of ${transformations.length}: ${transform.originalName}...`;
+
+			try {
+				await this.renameAsset(transform.assetId, transform.newName);
+				successCount++;
+			} catch (error) {
+				console.error(`Failed to rename ${transform.originalName}:`, error);
+				errorCount++;
+			}
+
+			// Add 200ms delay between renames (except for the last one)
+			if (i < transformations.length - 1) {
+				await new Promise((resolve) => setTimeout(resolve, 200));
+			}
+		}
+
+		// Show final results
+		progressDiv.innerHTML = `Complete! Successfully renamed ${successCount} files. ${errorCount > 0 ? `${errorCount} errors.` : ""}`;
+
+		// Clear preview and reset form
+		document.querySelector("#bulk-preview-container").innerHTML = "";
+		document.querySelector("#bulk-find").value = "";
+		document.querySelector("#bulk-replace").value = "";
+
+		// Hide progress after 3 seconds
+		setTimeout(() => {
+			progressDiv.classList.remove("active");
+			applyButton.disabled = false;
+		}, 3000);
 	},
 
 	async allAssets(folderId) {
