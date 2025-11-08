@@ -1612,18 +1612,22 @@ const FileChompy = {
 		"wool-dryer-ball",
 	],
 
-	isValidAssetName(assetName) {
+	validateAssetName(assetName) {
 		// Check if asset name ends with _\d+$ pattern
 		const suffixPattern = /_\d+$/;
 		if (!suffixPattern.test(assetName)) {
-			return false;
+			return { valid: false, matches: [] };
 		}
 
 		// Extract the handle part (everything before the last underscore followed by digits)
 		const handlePart = assetName.replace(/_\d+$/, "");
 
-		// Check if the handle part is in the validHandles array
-		return this.validHandles.includes(handlePart);
+		// Find all matching handles
+		const matches = this.validHandles.filter(
+			(handle) => handle === handlePart,
+		);
+
+		return { valid: matches.length > 0, matches: matches };
 	},
 
 	async main() {
@@ -1724,7 +1728,7 @@ const FileChompy = {
 			`;
 
 			// Validate the initial asset name and apply styling
-			if (!this.isValidAssetName(assetNameWithoutExtension)) {
+			if (!this.validateAssetName(assetNameWithoutExtension).valid) {
 				listItem.classList.add("invalid-asset");
 			} else {
 				listItem.classList.add("valid-asset");
@@ -1734,7 +1738,7 @@ const FileChompy = {
 			const input = listItem.querySelector('input[name="assetName"]');
 			input.addEventListener("input", (e) => {
 				const currentName = e.target.value;
-				if (this.isValidAssetName(currentName)) {
+				if (this.validateAssetName(currentName).valid) {
 					// Remove invalid styling if name becomes valid
 					listItem.classList.remove("invalid-asset");
 				} else {
@@ -1753,7 +1757,7 @@ const FileChompy = {
 				const button = form.querySelector("button");
 
 				// Validate asset name format
-				if (!this.isValidAssetName(newName)) {
+				if (!this.validateAssetName(newName).valid) {
 					button.textContent = "Invalid Name";
 					button.classList.add("error");
 					setTimeout(() => {
