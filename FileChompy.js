@@ -782,7 +782,6 @@ const FileChompy = {
 		"linen-top-sheet-tobacco",
 		"linen-top-sheet-white",
 		"linen-venice-set-bone-f-q",
-		"",
 		"linen-venice-set-bone-k-ck",
 		"linen-venice-set-coal-f-q",
 		"linen-venice-set-coal-k-ck",
@@ -1537,7 +1536,7 @@ const FileChompy = {
 
 		fileChompyContainer.innerHTML = `
 			<style>${this.css}</style>
-			<h1>👹 FileChompy -- ${WebDAM.FOLDER_NAME(WebDAM.FOLDER_ID)}</h1>
+			<h1>👹 FileChompy -- ${WebDAM.FOLDER_NAME} (${WebDAM.FOLDER_ID})</h1>
 		`;
 		container.appendChild(fileChompyContainer);
 
