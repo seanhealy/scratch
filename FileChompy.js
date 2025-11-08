@@ -1410,11 +1410,13 @@ const FileChompy = {
 	],
 
 	async main() {
-		// console.log(await this.allAssets(14164897));
-		this.buildUI();
+		await this.buildUI();
 	},
 
-	buildUI() {
+	async buildUI() {
+		const assets = await this.allAssets(this.getActiveFolderId());
+		console.log(assets);
+
 		const container = document.body;
 		const fileChompyContainer = document.createElement("div");
 		fileChompyContainer.id = "FileChompyContainer";
@@ -1423,9 +1425,31 @@ const FileChompy = {
 		fileChompyContainer.style.inset = "0";
 		fileChompyContainer.style.zIndex = "9999";
 		fileChompyContainer.style.backgroundColor = "#fff";
+		fileChompyContainer.style.overflow = "auto";
 
-		fileChompyContainer.innerHTML = `<h2>UI</h2>`;
+		fileChompyContainer.innerHTML = `<h1>👹 FileChompy</h1>`;
 		container.appendChild(fileChompyContainer);
+
+		const list = document.createElement("ul");
+		list.style.display = "flex";
+		list.style.flexDirection = "column";
+		list.style.gap = "1rem";
+
+		fileChompyContainer.appendChild(list);
+
+		for (const assetData of assets) {
+			const listItem = document.createElement("li");
+
+			listItem.style.display = "flex";
+			listItem.style.alignItems = "center";
+			listItem.style.gap = "1rem";
+
+			listItem.innerHTML = `
+				<img src="${assetData.asset.thumburl.thumb100}" alt="${assetData.asset.title}">
+				<span>${assetData.asset.title}</span>
+			`;
+			list.appendChild(listItem);
+		}
 	},
 
 	async *streamFolderAssets(folderId) {
@@ -1523,6 +1547,41 @@ const FileChompy = {
 		const rawJSON = await response.text();
 		const data = JSON.parse(rawJSON.slice(this.jsonPrefixLength));
 		return data;
+	},
+
+	async renameFile(assetId, newName) {
+		const url = new URL(
+			"https://parachutehome.webdamdb.com/remoterequest.php",
+		);
+
+		const formData = new URLSearchParams();
+		formData.set("method", "saveMetadataByField");
+		formData.set("id", assetId);
+		formData.set("fieldName", "ASSETNAME");
+		formData.set("fieldType", "text");
+		formData.set("value", newName);
+
+		const response = await fetch(url.href, {
+			credentials: "include",
+			headers: {
+				"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+			},
+			body: formData.toString(),
+			method: "POST",
+			mode: "cors",
+		});
+
+		if (!response.ok) {
+			throw new Error(`HTTP error! status: ${response.status}`);
+		}
+
+		const rawJSON = await response.text();
+		const data = JSON.parse(rawJSON.slice(this.jsonPrefixLength));
+		return data;
+	},
+
+	getActiveFolderId() {
+		return window.WebDAM.FOLDER_ID;
 	},
 
 	extractSessionExpiration() {
