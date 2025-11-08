@@ -1865,11 +1865,11 @@ const FileChompy = {
 			<div class="bulk-form">
 				<div class="bulk-input-group">
 					<label for="bulk-find">Find:</label>
-					<input type="text" id="bulk-find" placeholder="e.g. _main">
+					<input type="text" id="bulk-find">
 				</div>
 				<div class="bulk-input-group">
 					<label for="bulk-replace">Replace:</label>
-					<input type="text" id="bulk-replace" placeholder="Leave empty to remove">
+					<input type="text" id="bulk-replace">
 				</div>
 				<div class="bulk-actions">
 					<button type="button" id="bulk-apply" disabled>Apply Changes</button>
