@@ -1,3 +1,5 @@
+// 👹 FileChompy.js
+
 const FileChompy = {
 	folderPageSize: 60,
 	jsonPrefixLength: 8,
