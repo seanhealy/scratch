@@ -1840,6 +1840,10 @@ const FileChompy = {
 			const form = listItem.querySelector("form");
 			form.addEventListener("submit", async (e) => {
 				e.preventDefault();
+
+				// Reset focus to the list item
+				listItem.focus();
+
 				const assetId = form.getAttribute("data-asset-id");
 				const newName = form.querySelector('input[name="assetName"]').value;
 				const button = form.querySelector("button");
@@ -1864,22 +1868,6 @@ const FileChompy = {
 						// Keep invalid styling for incorrect names
 						listItem.classList.add("invalid-asset");
 						listItem.classList.remove("valid-asset");
-					}
-
-					// Focus the next invalid asset's input field
-					let currentItem = listItem.nextElementSibling;
-					while (currentItem) {
-						if (currentItem.classList.contains("invalid-asset")) {
-							const input = currentItem.querySelector(
-								'input[name="assetName"]',
-							);
-							if (input) {
-								input.focus();
-								input.select();
-								break;
-							}
-						}
-						currentItem = currentItem.nextElementSibling;
 					}
 
 					setTimeout(() => {
