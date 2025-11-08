@@ -10,7 +10,9 @@ const FileChompy = {
 				inset: 0;
 				z-index: 9999;
 				background-color: #fff;
-				overflow: auto;
+				overflow: hidden;
+				display: flex;
+				flex-direction: column;
 			}
 
 			#FileChompyContainer h1 {
@@ -36,6 +38,17 @@ const FileChompy = {
 				font-weight: 400;
 			}
 
+			#FileChompyContainer .main-content {
+				display: flex;
+				flex: 1;
+				overflow: hidden;
+			}
+
+			#FileChompyContainer .assets-section {
+				flex: 1;
+				overflow: auto;
+			}
+
 			#FileChompyContainer ul {
 				display: flex;
 				flex-direction: column;
@@ -43,6 +56,75 @@ const FileChompy = {
 				padding: 1rem;
 				margin: 0;
 				list-style: none;
+			}
+
+			#FileChompyContainer .handles-sidebar {
+				width: 350px;
+				background-color: #f8f9fa;
+				border-left: 1px solid #e9ecef;
+				display: flex;
+				flex-direction: column;
+				overflow: hidden;
+			}
+
+			#FileChompyContainer .handles-sidebar h2 {
+				margin: 0;
+				padding: 1rem;
+				font-size: 1rem;
+				font-weight: 600;
+				color: #212529;
+				background-color: #e9ecef;
+				border-bottom: 1px solid #dee2e6;
+				text-align: center;
+			}
+
+			#FileChompyContainer .handles-list {
+				flex: 1;
+				overflow-y: auto;
+				padding: 0;
+			}
+
+			#FileChompyContainer .handles-search {
+				padding: 0.75rem;
+				border-bottom: 1px solid #dee2e6;
+			}
+
+			#FileChompyContainer .handles-search input {
+				width: 100%;
+				padding: 0.5rem;
+				border: 1px solid #ced4da;
+				border-radius: 4px;
+				font-size: 14px;
+				box-sizing: border-box;
+			}
+
+			#FileChompyContainer .handles-search input:focus {
+				outline: none;
+				border-color: #007cba;
+				box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.1);
+			}
+
+			#FileChompyContainer .handle-item {
+				padding: 0.5rem 0.75rem;
+				border-bottom: 1px solid #e9ecef;
+				font-size: 12px;
+				color: #495057;
+				cursor: pointer;
+				word-break: break-word;
+				transition: background-color 0.2s ease;
+			}
+
+			#FileChompyContainer .handle-item:hover {
+				background-color: #e2e6ea;
+			}
+
+			#FileChompyContainer .handle-item:last-child {
+				border-bottom: none;
+			}
+
+			#FileChompyContainer .handle-item.highlighted {
+				background-color: #fff3cd;
+				border-left: 3px solid #ffc107;
 			}
 
 			#FileChompyContainer li {
@@ -1559,11 +1641,66 @@ const FileChompy = {
 		fileChompyContainer.innerHTML = `
 			<style>${this.css}</style>
 			<h1>👹 FileChompy<br><small>Folder: ${WebDAM.FOLDER_NAME} (${WebDAM.FOLDER_ID})</small></h1>
+			<div class="main-content">
+				<div class="assets-section">
+				</div>
+				<div class="handles-sidebar">
+					<h2>📋 Valid Handles Reference</h2>
+					<div class="handles-search">
+						<input type="text" placeholder="Search handles..." id="handles-search-input">
+					</div>
+					<div class="handles-list" id="handles-list">
+					</div>
+				</div>
+			</div>
 		`;
 		container.appendChild(fileChompyContainer);
 
+		const assetsSection =
+			fileChompyContainer.querySelector(".assets-section");
 		const list = document.createElement("ul");
-		fileChompyContainer.appendChild(list);
+		assetsSection.appendChild(list);
+
+		// Populate handles sidebar
+		const handlesList = fileChompyContainer.querySelector("#handles-list");
+		const searchInput = fileChompyContainer.querySelector(
+			"#handles-search-input",
+		);
+
+		const renderHandles = (filteredHandles = this.validHandles) => {
+			handlesList.innerHTML = "";
+			filteredHandles.forEach((handle) => {
+				const handleItem = document.createElement("div");
+				handleItem.className = "handle-item";
+				handleItem.textContent = handle;
+				handleItem.addEventListener("click", () => {
+					// Copy handle to clipboard
+					navigator.clipboard.writeText(handle).then(() => {
+						// Show temporary feedback
+						const originalText = handleItem.textContent;
+						handleItem.textContent = "✓ Copied!";
+						handleItem.style.backgroundColor = "#d4edda";
+						setTimeout(() => {
+							handleItem.textContent = originalText;
+							handleItem.style.backgroundColor = "";
+						}, 1000);
+					});
+				});
+				handlesList.appendChild(handleItem);
+			});
+		};
+
+		// Initial render of all handles
+		renderHandles();
+
+		// Add search functionality
+		searchInput.addEventListener("input", (e) => {
+			const searchTerm = e.target.value.toLowerCase();
+			const filteredHandles = this.validHandles.filter((handle) =>
+				handle.toLowerCase().includes(searchTerm),
+			);
+			renderHandles(filteredHandles);
+		});
 
 		for (const assetData of assets) {
 			const listItem = document.createElement("li");
