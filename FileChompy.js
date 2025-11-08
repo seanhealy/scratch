@@ -1796,10 +1796,14 @@ const FileChompy = {
 			"",
 		);
 
+		// Add data attributes to the li element for easier access
+		listItem.setAttribute("data-asset-id", assetData.asset.id);
+		listItem.setAttribute("data-asset-name", assetNameWithoutExtension);
+
 		listItem.innerHTML = `
-			<img src="${assetData.asset.thumburl.thumb100}" alt="${assetNameWithoutExtension}">
+			<img src="${assetData.asset.thumburl.thumb100}">
 			<div class="form-container">
-				<form data-asset-id="${assetData.asset.id}">
+				<form>
 					<input
 						type="text"
 						value="${assetNameWithoutExtension}"
@@ -1876,56 +1880,17 @@ const FileChompy = {
 		form.addEventListener("submit", async (e) => {
 			e.preventDefault();
 
-			// Reset focus to the list item
-			listItem.focus();
-
-			const assetId = form.getAttribute("data-asset-id");
+			const assetId = listItem.getAttribute("data-asset-id");
 			const newName = form.querySelector('input[name="assetName"]').value;
-			const button = form.querySelector("button");
-
-			// Check if asset name is valid for styling purposes
-			const isValid = this.validateAssetName(newName).valid;
-
-			// Disable button and show loading state
-			button.disabled = true;
-			button.textContent = "Renaming...";
 
 			try {
-				await this.renameFile(assetId, newName);
-				button.textContent = "Renamed!";
-				button.classList.add("success");
-
-				// Update image title to reflect new name
-				const img = listItem.querySelector("img");
-				if (img) {
-					img.alt = newName;
-				}
-
-				// Update list item styling based on validity
-				if (isValid) {
-					listItem.classList.remove("invalid-asset");
-					listItem.classList.add("valid-asset");
-				} else {
-					// Keep invalid styling for incorrect names
-					listItem.classList.add("invalid-asset");
-					listItem.classList.remove("valid-asset");
-				}
-
-				setTimeout(() => {
-					button.textContent = "Rename";
-					button.classList.remove("success");
-					button.disabled = false;
-				}, 2000);
+				await this.renameAsset(assetId, newName);
 			} catch (error) {
-				console.error("Rename failed:", error);
-				button.textContent = "Error";
-				button.classList.add("error");
-				setTimeout(() => {
-					button.textContent = "Rename";
-					button.classList.remove("error");
-					button.disabled = false;
-				}, 2000);
+				console.error(error);
 			}
+
+			// Reset focus to the list item
+			listItem.focus();
 		});
 	},
 
@@ -2055,6 +2020,68 @@ const FileChompy = {
 		const rawJSON = await response.text();
 		const data = JSON.parse(rawJSON.slice(this.jsonPrefixLength));
 		return data;
+	},
+
+	async renameAsset(assetId, newName) {
+		// Gather all required elements upfront
+		const listItem = document.querySelector(`li[data-asset-id="${assetId}"]`);
+		const form = listItem?.querySelector("form");
+		const button = form?.querySelector("button");
+		const input = form?.querySelector('input[name="assetName"]');
+
+		// Validate required elements
+		if (!listItem || !form || !button || !input) {
+			throw new Error(`Cannot find required elements for asset: ${assetId}`);
+		}
+
+		// Check if asset name is valid for styling purposes
+		const isValid = this.validateAssetName(newName).valid;
+
+		// Update button state
+		button.disabled = true;
+		button.textContent = "Renaming...";
+
+		try {
+			await this.renameFile(assetId, newName);
+
+			// Update the data-asset-name attribute
+			listItem.setAttribute("data-asset-name", newName);
+
+			// Update list item styling based on validity
+			if (isValid) {
+				listItem.classList.remove("invalid-asset");
+				listItem.classList.add("valid-asset");
+			} else {
+				listItem.classList.add("invalid-asset");
+				listItem.classList.remove("valid-asset");
+			}
+
+			// Update the input field
+			input.value = newName;
+
+			// Update button state
+			button.textContent = "Renamed!";
+			button.classList.add("success");
+			setTimeout(() => {
+				button.textContent = "Rename";
+				button.classList.remove("success");
+				button.disabled = false;
+			}, 2000);
+		} catch (error) {
+			console.error("Rename failed:", error);
+
+			// Update button state
+			button.textContent = "Error";
+			button.classList.add("error");
+			setTimeout(() => {
+				button.textContent = "Rename";
+				button.classList.remove("error");
+				button.disabled = false;
+			}, 2000);
+
+			// Re-throw error for caller to handle if needed
+			throw error;
+		}
 	},
 
 	getActiveFolderId() {
