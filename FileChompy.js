@@ -143,11 +143,14 @@ const FileChompy = {
 				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 			}
 
+			#FileChompyContainer .form-container {
+				flex: 1;
+			}
+
 			#FileChompyContainer form {
 				display: flex;
 				align-items: center;
 				gap: 0.75rem;
-				flex: 1;
 			}
 
 			#FileChompyContainer input[name="assetName"] {
@@ -203,6 +206,36 @@ const FileChompy = {
 			#FileChompyContainer li.valid-asset {
 				background-color: #e6ffe6;
 				border-color: #b3ffb3;
+			}
+
+			#FileChompyContainer .matches-display {
+				margin-top: 0.5rem;
+				font-size: 12px;
+				color: #6c757d;
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+			}
+
+			#FileChompyContainer .matches-pills {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.25rem;
+			}
+
+			#FileChompyContainer .matches-pill {
+				background-color: #e9ecef;
+				color: #495057;
+				padding: 0.25rem 0.5rem;
+				border-radius: 12px;
+				font-size: 11px;
+				border: 1px solid #ced4da;
+			}
+
+			#FileChompyContainer .matches-pill.no-matches {
+				background-color: #f8d7da;
+				color: #721c24;
+				border-color: #f5c6cb;
 			}
 		`,
 	validHandles: [
@@ -1611,6 +1644,17 @@ const FileChompy = {
 		"windowpane-gauze-duvet-cover-set",
 		"wool-dryer-ball",
 	],
+	assetBracePattern: new RegExp(
+		[
+			"^", // Start of string
+			"(.*?)", // Capture prefix (any characters, non-greedy)
+			"\\{", // Literal opening brace
+			"([^{}]+)", // Capture options (non-brace characters, at least one)
+			"\\}", // Literal closing brace
+			"(.*)", // Capture suffix (any characters)
+			"$", // End of string
+		].join(""),
+	),
 
 	validateAssetName(assetName) {
 		// Check if asset name ends with _\d+$ pattern
@@ -1622,9 +1666,24 @@ const FileChompy = {
 		// Extract the handle part (everything before the last underscore followed by digits)
 		const handlePart = assetName.replace(/_\d+$/, "");
 
-		// Find all matching handles
-		const matches = this.validHandles.filter(
-			(handle) => handle === handlePart,
+		// Build list of handles to match against
+		let expandedHandles;
+		const braceMatch = handlePart.match(this.assetBracePattern);
+
+		if (braceMatch) {
+			const [, prefix, optionsStr, suffix] = braceMatch;
+
+			// Split options and expand each one
+			const options = optionsStr.split(",").map((opt) => opt.trim());
+			expandedHandles = options.map((option) => prefix + option + suffix);
+		} else {
+			// Standard exact match for non-glob patterns
+			expandedHandles = [handlePart];
+		}
+
+		// Find matches for all expanded handles
+		const matches = this.validHandles.filter((handle) =>
+			expandedHandles.includes(handle),
 		);
 
 		return { valid: matches.length > 0, matches: matches };
@@ -1717,14 +1776,17 @@ const FileChompy = {
 
 			listItem.innerHTML = `
 				<img src="${assetData.asset.thumburl.thumb100}" alt="${assetData.asset.title}">
-				<form data-asset-id="${assetData.asset.id}">
-					<input
-						type="text"
-						value="${assetNameWithoutExtension}"
-						name="assetName"
-					>
-					<button type="submit">Rename</button>
-				</form>
+				<div class="form-container">
+					<form data-asset-id="${assetData.asset.id}">
+						<input
+							type="text"
+							value="${assetNameWithoutExtension}"
+							name="assetName"
+						>
+						<button type="submit">Rename</button>
+					</form>
+					<div class="matches-display"></div>
+				</div>
 			`;
 
 			// Validate the initial asset name and apply styling
@@ -1736,16 +1798,42 @@ const FileChompy = {
 
 			// Add real-time validation on input
 			const input = listItem.querySelector('input[name="assetName"]');
-			input.addEventListener("input", (e) => {
-				const currentName = e.target.value;
-				if (this.validateAssetName(currentName).valid) {
-					// Remove invalid styling if name becomes valid
+			const matchesDisplay = listItem.querySelector(".matches-display");
+
+			const updateMatches = (name) => {
+				const validation = this.validateAssetName(name);
+				const matchCount = validation.matches.length;
+
+				if (matchCount === 0) {
+					matchesDisplay.innerHTML = `
+						<span>Matches (0):</span>
+						<div class="matches-pills">
+							<span class="matches-pill no-matches">no matches</span>
+						</div>
+					`;
+				} else {
+					const pillsHtml = validation.matches
+						.map((match) => `<span class="matches-pill">${match}</span>`)
+						.join("");
+					matchesDisplay.innerHTML = `
+						<span>Matches (${matchCount}):</span>
+						<div class="matches-pills">${pillsHtml}</div>
+					`;
+				}
+
+				if (validation.valid) {
 					listItem.classList.remove("invalid-asset");
 				} else {
-					// Add invalid styling if name becomes invalid
 					listItem.classList.add("invalid-asset");
 					listItem.classList.remove("valid-asset");
 				}
+			};
+
+			// Initial matches display
+			updateMatches(assetNameWithoutExtension);
+
+			input.addEventListener("input", (e) => {
+				updateMatches(e.target.value);
 			});
 
 			// Add event listener for form submission

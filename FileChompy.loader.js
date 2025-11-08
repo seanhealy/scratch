@@ -1,7 +1,7 @@
 (() => {
 	const script = document.createElement("script");
 	script.src =
-		"https://cdn.jsdelivr.net/gh/seanhealy/scratch@682b3e5941c7e3d7ecc21392dbec5d69d1077161/FileChompy.js";
+		"https://cdn.jsdelivr.net/gh/seanhealy/scratch@08a789f249edc78d6571d70a5d8de94c1c288577/FileChompy.js";
 
 	script.onload = () => console.log("FileChompy loaded successfully!");
 	script.onerror = () => console.error("Error loading FileChompy");
