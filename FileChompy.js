@@ -1756,16 +1756,8 @@ const FileChompy = {
 				const newName = form.querySelector('input[name="assetName"]').value;
 				const button = form.querySelector("button");
 
-				// Validate asset name format
-				if (!this.validateAssetName(newName).valid) {
-					button.textContent = "Invalid Name";
-					button.classList.add("error");
-					setTimeout(() => {
-						button.textContent = "Rename";
-						button.classList.remove("error");
-					}, 2000);
-					return;
-				}
+				// Check if asset name is valid for styling purposes
+				const isValid = this.validateAssetName(newName).valid;
 
 				// Disable button and show loading state
 				button.disabled = true;
@@ -1776,9 +1768,15 @@ const FileChompy = {
 					button.textContent = "Renamed!";
 					button.classList.add("success");
 
-					// Update list item styling to reflect valid rename
-					listItem.classList.remove("invalid-asset");
-					listItem.classList.add("valid-asset");
+					// Update list item styling based on validity
+					if (isValid) {
+						listItem.classList.remove("invalid-asset");
+						listItem.classList.add("valid-asset");
+					} else {
+						// Keep invalid styling for incorrect names
+						listItem.classList.add("invalid-asset");
+						listItem.classList.remove("valid-asset");
+					}
 
 					// Focus the next invalid asset's input field
 					let currentItem = listItem.nextElementSibling;
