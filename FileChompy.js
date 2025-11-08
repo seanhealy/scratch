@@ -1,4 +1,4 @@
-// 👹 FileChompy.js
+// 👹 FileChompy v0.1.0
 
 const FileChompy = {
 	folderPageSize: 60,
@@ -1618,16 +1618,20 @@ const FileChompy = {
 					listItem.classList.remove("invalid-asset");
 					listItem.classList.add("valid-asset");
 
-					// Focus the next asset's input field
-					const nextListItem = listItem.nextElementSibling;
-					if (nextListItem) {
-						const nextInput = nextListItem.querySelector(
-							'input[name="assetName"]',
-						);
-						if (nextInput) {
-							nextInput.focus();
-							nextInput.select();
+					// Focus the next invalid asset's input field
+					let currentItem = listItem.nextElementSibling;
+					while (currentItem) {
+						if (currentItem.classList.contains("invalid-asset")) {
+							const input = currentItem.querySelector(
+								'input[name="assetName"]',
+							);
+							if (input) {
+								input.focus();
+								input.select();
+								break;
+							}
 						}
+						currentItem = currentItem.nextElementSibling;
 					}
 
 					setTimeout(() => {
