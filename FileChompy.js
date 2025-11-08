@@ -6,6 +6,34 @@ const FileChompy = {
 	css: `
 			#FileChompyContainer {
 				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+				position: absolute;
+				inset: 0;
+				z-index: 9999;
+				background-color: #fff;
+				overflow: auto;
+			}
+
+			#FileChompyContainer h1 {
+				margin: 0;
+				padding: 1rem;
+				font-size: 1.5rem;
+				font-weight: 600;
+				color: #212529;
+				background-color: #f8f9fa;
+				border-bottom: 1px solid #e9ecef;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				position: sticky;
+				top: 0;
+				z-index: 10;
+			}
+
+			#FileChompyContainer h1 small {
+				font-size: 0.7em;
+				color: #6c757d;
+				display: block;
+				font-weight: 400;
 			}
 
 			#FileChompyContainer ul {
@@ -1528,15 +1556,9 @@ const FileChompy = {
 		const fileChompyContainer = document.createElement("div");
 		fileChompyContainer.id = "FileChompyContainer";
 
-		fileChompyContainer.style.position = "absolute";
-		fileChompyContainer.style.inset = "0";
-		fileChompyContainer.style.zIndex = "9999";
-		fileChompyContainer.style.backgroundColor = "#fff";
-		fileChompyContainer.style.overflow = "auto";
-
 		fileChompyContainer.innerHTML = `
 			<style>${this.css}</style>
-			<h1>👹 FileChompy -- ${WebDAM.FOLDER_NAME} (${WebDAM.FOLDER_ID})</h1>
+			<h1>👹 FileChompy<br><small>Folder: ${WebDAM.FOLDER_NAME} (${WebDAM.FOLDER_ID})</small></h1>
 		`;
 		container.appendChild(fileChompyContainer);
 
