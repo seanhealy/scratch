@@ -1690,13 +1690,30 @@ const FileChompy = {
 	},
 
 	async main() {
-		await this.buildUI();
+		await this.uiBuild();
 	},
 
-	async buildUI() {
-		const assets = await this.allAssets(this.getActiveFolderId());
-		console.log(assets);
+	// uiCreate* → Creates and returns DOM elements
+	// uiSetup* → Configures behavior and attaches event handlers
+	// uiRender* → Updates/displays content dynamically
+	//
+	// main() → uiBuild()
+	// ├── uiCreateMainContainer()
+	// ├── uiSetupHandlesSidebar()
+	// └── uiCreateAssetsList()
+	//     └── for each asset: uiCreateAssetItem()
+	//         ├── uiSetupAssetValidation() → uiRenderValidationDisplay()
+	//         └── uiSetupAssetForm()
 
+	async uiBuild() {
+		const assets = await this.allAssets(this.getActiveFolderId());
+
+		const container = this.uiCreateMainContainer();
+		this.uiSetupHandlesSidebar(container);
+		this.uiCreateAssetsList(container, assets);
+	},
+
+	uiCreateMainContainer() {
 		const container = document.body;
 		const fileChompyContainer = document.createElement("div");
 		fileChompyContainer.id = "FileChompyContainer";
@@ -1718,17 +1735,12 @@ const FileChompy = {
 			</div>
 		`;
 		container.appendChild(fileChompyContainer);
+		return fileChompyContainer;
+	},
 
-		const assetsSection =
-			fileChompyContainer.querySelector(".assets-section");
-		const list = document.createElement("ul");
-		assetsSection.appendChild(list);
-
-		// Populate handles sidebar
-		const handlesList = fileChompyContainer.querySelector("#handles-list");
-		const searchInput = fileChompyContainer.querySelector(
-			"#handles-search-input",
-		);
+	uiSetupHandlesSidebar(container) {
+		const handlesList = container.querySelector("#handles-list");
+		const searchInput = container.querySelector("#handles-search-input");
 
 		const renderHandles = (filteredHandles = this.validHandles) => {
 			handlesList.innerHTML = "";
@@ -1764,131 +1776,157 @@ const FileChompy = {
 			);
 			renderHandles(filteredHandles);
 		});
+	},
+
+	uiCreateAssetsList(container, assets) {
+		const assetsSection = container.querySelector(".assets-section");
+		const list = document.createElement("ul");
+		assetsSection.appendChild(list);
 
 		for (const assetData of assets) {
-			const listItem = document.createElement("li");
+			const listItem = this.uiCreateAssetItem(assetData);
+			list.appendChild(listItem);
+		}
+	},
 
-			// Remove file extension from asset name
-			const assetNameWithoutExtension = assetData.asset.title.replace(
-				/\.[^/.]+$/,
-				"",
+	uiCreateAssetItem(assetData) {
+		const listItem = document.createElement("li");
+		const assetNameWithoutExtension = assetData.asset.title.replace(
+			/\.[^/.]+$/,
+			"",
+		);
+
+		listItem.innerHTML = `
+			<img src="${assetData.asset.thumburl.thumb100}" alt="${assetNameWithoutExtension}">
+			<div class="form-container">
+				<form data-asset-id="${assetData.asset.id}">
+					<input
+						type="text"
+						value="${assetNameWithoutExtension}"
+						name="assetName"
+					>
+					<button type="submit">Rename</button>
+				</form>
+				<div class="matches-display"></div>
+			</div>
+		`;
+
+		// Setup validation and form handling
+		this.uiSetupAssetValidation(listItem, assetNameWithoutExtension);
+		this.uiSetupAssetForm(listItem);
+
+		return listItem;
+	},
+
+	uiSetupAssetValidation(listItem, initialAssetName) {
+		const input = listItem.querySelector('input[name="assetName"]');
+		const matchesDisplay = listItem.querySelector(".matches-display");
+
+		// Initial matches display
+		this.uiRenderValidationDisplay(
+			matchesDisplay,
+			listItem,
+			initialAssetName,
+		);
+
+		// Add real-time validation on input
+		input.addEventListener("input", (e) => {
+			this.uiRenderValidationDisplay(
+				matchesDisplay,
+				listItem,
+				e.target.value,
 			);
+		});
+	},
 
-			listItem.innerHTML = `
-				<img src="${assetData.asset.thumburl.thumb100}" alt="${assetData.asset.title}">
-				<div class="form-container">
-					<form data-asset-id="${assetData.asset.id}">
-						<input
-							type="text"
-							value="${assetNameWithoutExtension}"
-							name="assetName"
-						>
-						<button type="submit">Rename</button>
-					</form>
-					<div class="matches-display"></div>
+	uiRenderValidationDisplay(matchesDisplay, listItem, assetName) {
+		const validation = this.validateAssetName(assetName);
+		const matchCount = validation.matches.length;
+
+		if (matchCount === 0) {
+			matchesDisplay.innerHTML = `
+				<span>Matches (0):</span>
+				<div class="matches-pills">
+					<span class="matches-pill no-matches">no matches</span>
 				</div>
 			`;
+		} else {
+			const pillsHtml = validation.matches
+				.map((match) => `<span class="matches-pill">${match}</span>`)
+				.join("");
+			matchesDisplay.innerHTML = `
+				<span>Matches (${matchCount}):</span>
+				<div class="matches-pills">${pillsHtml}</div>
+			`;
+		}
 
-			// Validate the initial asset name and apply styling
-			if (!this.validateAssetName(assetNameWithoutExtension).valid) {
-				listItem.classList.add("invalid-asset");
-			} else {
-				listItem.classList.add("valid-asset");
-			}
+		// Update list item validation styling
+		if (validation.valid) {
+			listItem.classList.remove("invalid-asset");
+			listItem.classList.add("valid-asset");
+		} else {
+			listItem.classList.add("invalid-asset");
+			listItem.classList.remove("valid-asset");
+		}
+	},
 
-			// Add real-time validation on input
-			const input = listItem.querySelector('input[name="assetName"]');
-			const matchesDisplay = listItem.querySelector(".matches-display");
+	uiSetupAssetForm(listItem) {
+		const form = listItem.querySelector("form");
 
-			const updateMatches = (name) => {
-				const validation = this.validateAssetName(name);
-				const matchCount = validation.matches.length;
+		form.addEventListener("submit", async (e) => {
+			e.preventDefault();
 
-				if (matchCount === 0) {
-					matchesDisplay.innerHTML = `
-						<span>Matches (0):</span>
-						<div class="matches-pills">
-							<span class="matches-pill no-matches">no matches</span>
-						</div>
-					`;
-				} else {
-					const pillsHtml = validation.matches
-						.map((match) => `<span class="matches-pill">${match}</span>`)
-						.join("");
-					matchesDisplay.innerHTML = `
-						<span>Matches (${matchCount}):</span>
-						<div class="matches-pills">${pillsHtml}</div>
-					`;
+			// Reset focus to the list item
+			listItem.focus();
+
+			const assetId = form.getAttribute("data-asset-id");
+			const newName = form.querySelector('input[name="assetName"]').value;
+			const button = form.querySelector("button");
+
+			// Check if asset name is valid for styling purposes
+			const isValid = this.validateAssetName(newName).valid;
+
+			// Disable button and show loading state
+			button.disabled = true;
+			button.textContent = "Renaming...";
+
+			try {
+				await this.renameFile(assetId, newName);
+				button.textContent = "Renamed!";
+				button.classList.add("success");
+
+				// Update image title to reflect new name
+				const img = listItem.querySelector("img");
+				if (img) {
+					img.alt = newName;
 				}
 
-				if (validation.valid) {
+				// Update list item styling based on validity
+				if (isValid) {
 					listItem.classList.remove("invalid-asset");
+					listItem.classList.add("valid-asset");
 				} else {
+					// Keep invalid styling for incorrect names
 					listItem.classList.add("invalid-asset");
 					listItem.classList.remove("valid-asset");
 				}
-			};
 
-			// Initial matches display
-			updateMatches(assetNameWithoutExtension);
-
-			input.addEventListener("input", (e) => {
-				updateMatches(e.target.value);
-			});
-
-			// Add event listener for form submission
-			const form = listItem.querySelector("form");
-			form.addEventListener("submit", async (e) => {
-				e.preventDefault();
-
-				// Reset focus to the list item
-				listItem.focus();
-
-				const assetId = form.getAttribute("data-asset-id");
-				const newName = form.querySelector('input[name="assetName"]').value;
-				const button = form.querySelector("button");
-
-				// Check if asset name is valid for styling purposes
-				const isValid = this.validateAssetName(newName).valid;
-
-				// Disable button and show loading state
-				button.disabled = true;
-				button.textContent = "Renaming...";
-
-				try {
-					await this.renameFile(assetId, newName);
-					button.textContent = "Renamed!";
-					button.classList.add("success");
-
-					// Update list item styling based on validity
-					if (isValid) {
-						listItem.classList.remove("invalid-asset");
-						listItem.classList.add("valid-asset");
-					} else {
-						// Keep invalid styling for incorrect names
-						listItem.classList.add("invalid-asset");
-						listItem.classList.remove("valid-asset");
-					}
-
-					setTimeout(() => {
-						button.textContent = "Rename";
-						button.classList.remove("success");
-						button.disabled = false;
-					}, 2000);
-				} catch (error) {
-					console.error("Rename failed:", error);
-					button.textContent = "Error";
-					button.classList.add("error");
-					setTimeout(() => {
-						button.textContent = "Rename";
-						button.classList.remove("error");
-						button.disabled = false;
-					}, 2000);
-				}
-			});
-
-			list.appendChild(listItem);
-		}
+				setTimeout(() => {
+					button.textContent = "Rename";
+					button.classList.remove("success");
+					button.disabled = false;
+				}, 2000);
+			} catch (error) {
+				console.error("Rename failed:", error);
+				button.textContent = "Error";
+				button.classList.add("error");
+				setTimeout(() => {
+					button.textContent = "Rename";
+					button.classList.remove("error");
+					button.disabled = false;
+				}, 2000);
+			}
+		});
 	},
 
 	async *streamFolderAssets(folderId) {
